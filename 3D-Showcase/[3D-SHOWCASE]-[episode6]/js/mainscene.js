@@ -7,6 +7,27 @@ var mscale = 10;
 
 var manager = new THREE.LoadingManager();
 
+var textureCube = new THREE.CubeTextureLoader().load(['json/envmap/posx.jpg', 'json/envmap/negx.jpg', 'json/envmap/posy.jpg', 'json/envmap/negy.jpg', 'json/envmap/posz.jpg', 'json/envmap/negz.jpg']);
+textureCube.generateMipmaps = false;
+
+//////////////////////////////////////////////////////// MATERIALS Library
+
+
+var backTextures = {
+    'back1': 'json/back1.png',
+    'back2': 'json/backTextures/back2.png'
+}
+currentBackMaterial = backTextures['back2'];
+
+var sitTextures = {
+    'bottom1': 'json/bottom1.png',
+    'bottom2': 'json/sitTextures/bottom2.png'
+}
+currentSitMaterial = sitTextures['bottom2'];
+
+
+
+////////////////////////////////////////////////////////
 
 manager.onLoad = function () {
     scene.add(group);
@@ -21,7 +42,7 @@ function init() {
         antialias: true,
         alpha: true
     });
-    renderer.setClearColor( 0x000000, 0 ); // the default
+    renderer.setClearColor( 0x000000, 0 );
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
 
@@ -49,28 +70,44 @@ function init() {
     var s2 = new THREE.SpotLight(0xffffff);
     s2.position.set(-300, 300, 1000);
     scene.add(s2);
+	
+	protoBack = new THREE.TextureLoader().load( currentBackMaterial, function () {
+        mat = new THREE.MeshPhongMaterial({
+            map: protoBack,
+            shininess: 0,
+            reflectivity: 0,
+            bumpScale: .0001,
+            combine: THREE.MultiplyOperation
+        });
+        loader.load('json/back_piece.json', function (geo) {
+            back = new THREE.Mesh(geo, mat);
+            back.material.needsUpdate = true;
+            back.position.set(0, 0, 0);
+            back.scale.set(mscale, mscale, mscale);
+            group.add(back);
+
+        });
+    });
+    
+    protoSit = new THREE.TextureLoader().load( currentSitMaterial, function () {
+        mat = new THREE.MeshPhongMaterial({
+            map: protoSit,
+            shininess: 0,
+            reflectivity: 0,
+            bumpScale: .0001,
+            combine: THREE.MultiplyOperation
+        });
+        loader.load('json/sit_piece.json', function (geo) {
+            sit = new THREE.Mesh(geo, mat);
+            sit.material.needsUpdate = true;
+            sit.position.set(0, 0, 0);
+            sit.scale.set(mscale, mscale, mscale);
+            group.add(sit);
+
+        });
+    });
 
    
-    loader.load(
-        'json/CHAIR_tut_bckp.json',
-        function ( geometry, materials ) {
-            var material = new THREE.MultiMaterial( materials );
-            var object = new THREE.Mesh( geometry, material );
-            object.scale.set(mscale, mscale, mscale);
-            object.position.set(0, 0, 0);
-            group.add( object );
-        }
-    );
-    loader.load(
-        'json/back_piece.json',
-        function ( geometry, materials ) {
-            var material = new THREE.MultiMaterial( materials );
-            var object = new THREE.Mesh( geometry, material );
-            object.scale.set(mscale, mscale, mscale);
-            object.position.set(0, 0, 0);
-            group.add( object );
-        }
-    );
     loader.load(
         'json/middle_rail.json',
         function ( geometry, materials ) {
@@ -136,7 +173,7 @@ function init() {
 }
 
 function render() {
-    group.rotation.y += 0.0005;
+    // group.rotation.y += 0.0005;
 }
 
 function animate() {
@@ -146,6 +183,68 @@ function animate() {
 }
 init();
 animate();
+
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+
+$('.texturesSwitch .sitt').on('click', function () {
+
+    textureTarget = $(this).attr("alt");
+    group.remove(protoSit);
+
+    protoSit = new THREE.TextureLoader().load( sitTextures[textureTarget], function () {
+        mat = new THREE.MeshPhongMaterial({
+            map: protoSit,
+            shininess: 0,
+            specular: new THREE.Color(0xff0000),
+            reflectivity: 0,
+            bumpScale: .0001,
+            combine: THREE.MultiplyOperation
+        });
+        loader.load('json/sit_piece.json', function (geo) {
+
+            sit = new THREE.Mesh(geo, mat);
+            sit.material.needsUpdate = true;
+            sit.position.set(0, 0, 0);
+            sit.scale.set(mscale, mscale, mscale);
+            group.add(sit);
+        });
+    });
+	currentSitMaterial = textureTarget;
+});
+
+$('.texturesSwitch .backk').on('click', function () {
+
+    textureTarget = $(this).attr("alt");
+    group.remove(protoBack);
+	
+    protoBack = new THREE.TextureLoader().load( backTextures[textureTarget], function () {
+        mat = new THREE.MeshPhongMaterial({
+            map: protoBack,
+            shininess: 0,
+            reflectivity: 0,
+            bumpScale: .0001,
+            combine: THREE.MultiplyOperation
+        });
+        loader.load('json/back_piece.json', function (geo) {
+
+            back = new THREE.Mesh(geo, mat);
+            back.material.needsUpdate = true;
+            back.position.set(0, 0, 0);
+            back.scale.set(mscale, mscale, mscale);
+            group.add(back);
+        });
+    });
+    currentBackMaterial = textureTarget;
+});
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+
 
 $(window).resize(function () {
     SCREEN_WIDTH = window.innerWidth;

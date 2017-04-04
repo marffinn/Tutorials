@@ -18,7 +18,7 @@
         "mapDiffuseRepeat":[1,1],
         "colorEmissive":[0,0,0],
         "transparent":false,
-        "mapDiffuse":"Chair_backUV_wood.png",
+        "mapDiffuse":"back1.png",
         "mapDiffuseAnisotropy":1,
         "shading":"phong",
         "colorDiffuse":[0.64,0.64,0.64],

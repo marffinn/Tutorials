@@ -18,7 +18,7 @@ body {
     float: left;
     overflow: hidden;
     background: #696969;
-    background: rgb(206,220,231); /* Old browsers */
+    background: rgb(206,220,231);
     background: -moz-radial-gradient(center, ellipse cover,  rgba(206,220,231,1) 0%, rgba(89,106,114,1) 100%); /* FF3.6-15 */
     background: -webkit-radial-gradient(center, ellipse cover,  rgba(206,220,231,1) 0%,rgba(89,106,114,1) 100%); /* Chrome10-25,Safari5.1-6 */
     background: radial-gradient(ellipse at center,  rgba(206,220,231,1) 0%,rgba(89,106,114,1) 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
@@ -105,7 +105,7 @@ body {
     right: 0;
     z-index: 400;
     padding: 0;
-    bottom: -78px;
+    bottom: -44px;
     margin: 0;
     -webkit-transition: all .2s cubic-bezier(0.895, 0.03, 0.685, 0.22);
     transition: all .2s cubic-bezier(0.895, 0.03, 0.685, 0.22);
@@ -139,4 +139,19 @@ body {
 .s-btnActive {
     background-color: #CC0000 !important;
     color: white;
+}
+.texturesSwitch {
+	z-index:888;
+	position:absolute;
+}
+.texturesSwitch p {
+	width:auto;
+	height:auto;
+	color:white;
+	background:crimson;
+	text-align:center;
+	line-height:30px;
+	cursor:pointer;
+	margin: 0;
+	padding:5px 20px;
 }

@@ -12,7 +12,6 @@ textureCube.generateMipmaps = false;
 
 //////////////////////////////////////////////////////// MATERIALS Library
 
-
 var backTextures = {
     'back1': 'json/back1.png',
     'back2': 'json/backTextures/back2.png'
@@ -23,9 +22,7 @@ var sitTextures = {
     'bottom1': 'json/bottom1.png',
     'bottom2': 'json/sitTextures/bottom2.png'
 }
-currentSitMaterial = sitTextures['bottom2'];
-
-
+currentSitMaterial = sitTextures['bottom1'];
 
 ////////////////////////////////////////////////////////
 
@@ -85,7 +82,6 @@ function init() {
             back.position.set(0, 0, 0);
             back.scale.set(mscale, mscale, mscale);
             group.add(back);
-
         });
     });
     
@@ -103,7 +99,6 @@ function init() {
             sit.position.set(0, 0, 0);
             sit.scale.set(mscale, mscale, mscale);
             group.add(sit);
-
         });
     });
 
@@ -189,7 +184,7 @@ animate();
 
 
 
-$('.texturesSwitch .sitt').on('click', function () {
+$('.sitt').on('click', function () {
 
     textureTarget = $(this).attr("alt");
     group.remove(protoSit);
@@ -215,7 +210,7 @@ $('.texturesSwitch .sitt').on('click', function () {
 	currentSitMaterial = textureTarget;
 });
 
-$('.texturesSwitch .backk').on('click', function () {
+$('.backk').on('click', function () {
 
     textureTarget = $(this).attr("alt");
     group.remove(protoBack);

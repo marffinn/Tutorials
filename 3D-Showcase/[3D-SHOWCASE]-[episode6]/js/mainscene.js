@@ -113,6 +113,7 @@ function init() {
             group.add( object );
         }
     );
+	
     loader.load(
         'json/back_legs.json',
         function ( geometry, materials ) {

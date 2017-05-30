@@ -1,0 +1,20 @@
+#container {
+    z-index: 100;
+    position: absolute;
+    display: block;
+    height: 100%;
+    float: left;
+    width: 100%;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+    background: #898989;
+    background: -moz-radial-gradient(center, ellipse cover, #f1f1f1 1%, #ffffff 100%);
+    background: -webkit-radial-gradient(center, ellipse cover, #f1f1f1 1%, #ffffff 100%);
+    background: radial-gradient(ellipse at center, #f1f1f1 1%, #ffffff 100%);
+    filter: progid: DXImageTransform.Microsoft.gradient( startColorstr='#f1f1f1', endColorstr='#ffffff', GradientType=1);
+}
+body {
+    margin: 0;
+    padding: 0;
+}

@@ -1,445 +1,334 @@
-var scene, camera, renderer;
-var controls;
-var SCREEN_WIDTH, SCREEN_HEIGHT;
+// stats
+stats = new Stats();
+stats.domElement.style.position = 'absolute';
+stats.domElement.style.top = '10px';
+stats.domElement.style.left = '10px';
+stats.domElement.style.zIndex = 100;
+document.body.appendChild(stats.domElement);
 
-var	player, world, tower;
-	
-var	mapArray = [];
-var level; // also an Array consisting of block spread on a 2D matrix
-var	playerArray = [];
-var towerArray	= [];
+var world = [
+  []
+];
+var worldWidth = 30;
+var worldHeight = 30;
+var chanceToStartAlive = 0.55;
+var deathLimit = 4;
+var birthLimit = 5;
+var numberOfSteps = 5;
 
-var raycaster = new THREE.Raycaster();
-var mouse = new THREE.Vector2();
-var intersects;
-var selection = null;
+world = generateMap();
 
-var loader = new THREE.JSONLoader();
+function iterate() {
+  world = doSimulationStep(world);
+}
+
+function generateMap() {
+  var map = [
+    []
+  ];
+  initialiseMap(map);
+  for (var i = 0; i < numberOfSteps; i++) {
+    map = doSimulationStep(map);
+  }
+  return map;
+}
+
+function initialiseMap(map) {
+  for (var x = 0; x < worldWidth; x++) {
+    map[x] = [];
+    for (var y = 0; y < worldHeight; y++) {
+      map[x][y] = 0;
+    }
+  }
+
+  for (var x = 0; x < worldWidth; x++) {
+    for (var y = 0; y < worldHeight; y++) {
+      if (Math.random() < chanceToStartAlive)
+        map[x][y] = 1;
+    }
+  }
+  return map;
+}
+
+function doSimulationStep(map) {
+  var newmap = [
+    []
+  ];
+  for (var x = 0; x < map.length; x++) {
+    newmap[x] = [];
+    for (var y = 0; y < map[0].length; y++) {
+      var nbs = countAliveNeighbours(map, x, y);
+      if (map[x][y] > 0) {
+        if (nbs < deathLimit) {
+          newmap[x][y] = 0;
+        } else {
+          newmap[x][y] = 1;
+        }
+      } else {
+        if (nbs > birthLimit) {
+          newmap[x][y] = 1;
+        } else {
+          newmap[x][y] = 0;
+        }
+      }
+    }
+  }
+  return newmap;
+}
+
+function countAliveNeighbours(map, x, y) {
+  var count = 0;
+  for (var i = -1; i < 2; i++) {
+    for (var j = -1; j < 2; j++) {
+      var nb_x = i + x;
+      var nb_y = j + y;
+      if (i == 0 && j == 0) {} else if (nb_x < 0 || nb_y < 0 ||
+        nb_x >= map.length ||
+        nb_y >= map[0].length) {
+        count = count + 1;
+      } else if (map[nb_x][nb_y] == 1) {
+        count = count + 1;
+      }
+    }
+  }
+  return count;
+}
+
+//////////////////////////////////////////////////////////////////// THREE.JS
+
+var world2 = world.slice(0);
+var easystar = new EasyStar.js();
+
+easystar.setGrid(world2);
+easystar.setAcceptableTiles([1]);
 
 var Colors = {
-	
-	midnightColor: 	'#514656',
-	grassColor:		'#9E9D7D',
-	beigeColor:		'#FEFDF5',
-	greenColor:		'#9FA560',
-	groundColor:	'#383636',
-	skyColor:		'#57D0FA',
-	floorColor:		'#D3BA85'
-	
+  midnightColor: 0x514656,
+  grassColor: 0x9E9D7D,
+  beigeColor: 0xFEFDF5,
+  greenColor: 0x9FA560,
+  skyColor: 0x57D0FA,
+  floorColor: 0xD3BA85,
+  waterColor: 0x74ccf4
+
 };
 
-/*
-ooooooooooo   ooooooo   oooo     oooo ooooooooooo oooooooooo 
-88  888  88 o888   888o  88   88  88   888    88   888    888
-    888     888     888   88 888 88    888ooo8     888oooo88 
-    888     888o   o888    888 888     888    oo   888  88o  
-   o888o      88ooo88       8   8     o888ooo8888 o888o  88o8
-*/
+var clock = new THREE.Clock();
 
-function Tower(){
-	
-	this.mesh = new THREE.Object3D();
-	
-	var geometry = new THREE.BoxGeometry( 0.2, 0.2, .2 , 1, 1, 1 );
-	var material = new THREE.MeshPhongMaterial( {color: Colors.midnightColor } );
-	var cup = new THREE.Mesh( geometry, material );
-        cup.rotation.x = Math.PI/2;
-        cup.position.y = 1;
-        cup.position.z = 0;
-    
-	this.mesh.add( cup );
-    towerArray.push( cup );
+scene = new THREE.Scene();
+scene.fog = new THREE.Fog(Colors.skyColor, 30, 120);
+
+var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 2, 40);
+camera.position.set(0, 5, 0);
+camera.rotation.y = 15;
+
+var renderer = new THREE.WebGLRenderer({
+  alpha: true,
+  antialias: true
+});
+renderer.setPixelRatio( window.devicePixelRatio );
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.enableZoom = true;
+
+var Sea = function(xPos, zPos) {
+
+  this.mesh = new THREE.Object3D();
+
+  var seaGeometry = new THREE.PlaneGeometry(1, 1, 4,4);
+  var seaMaterial = new THREE.MeshPhongMaterial({
+    color: Colors.waterColor,
+    opacity: 0.5,
+	  wireframe: false,
+    shininess: 0
+  });
+
+  this.sea = new THREE.Mesh(seaGeometry, seaMaterial);
+  this.sea.tex = Colors.waterColor;
+  this.sea.type = 'sea';
+  this.sea.rotation.x = -Math.PI/2;
+  this.sea.position.set(xPos, 0.7, zPos);
+
+  this.mesh.add(this.sea);
+
 }
-Tower.prototype.selectedTower = function(event){
+var Ground = function(xPos, zPos) {
 
-   var tw1 = new TWEEN.Tween( this.mesh.position )
-                    .to( { y : 1 }, 1000 )
-                    .easing(TWEEN.Easing.Quadratic.InOut)
-                    .yoyo()
-                    .start();
-    
-   var tw2 = new TWEEN.Tween( this.mesh.position )
-                    .to( { y : 0 }, 1000 )
-                    .easing(TWEEN.Easing.Quadratic.InOut)
-                    .yoyo()
-                    .start();
-    tw1.chain(tw2);
-    tw2.chain(tw1);
-    
-    tw1.start();
-    
-}
+  this.mesh = new THREE.Object3D();
 
-function createTower(){
-	tower = new Tower();
-	scene.add( tower.mesh );
-}
+  var groundGeometry = new THREE.BoxGeometry(1, 1, 1);
+  var groundMaterial = new THREE.MeshPhongMaterial({
+    color: Colors.beigeColor
+  });
 
-/*
-oooooooooo ooooo            o   ooooo  oooo ooooooooooo oooooooooo 
- 888    888 888            888    888  88    888    88   888    888
- 888oooo88  888           8  88     888      888ooo8     888oooo88 
- 888        888      o   8oooo88    888      888    oo   888  88o  
-o888o      o888ooooo88 o88o  o888o o888o    o888ooo8888 o888o  88o8
-*/
+  this.ground = new THREE.Mesh(groundGeometry, groundMaterial);
+  this.ground.tex = Colors.floorColor;
+  this.ground.type = 'sea';
+  this.ground.position.set(xPos, 0.2, zPos);
+  this.ground.rotation.x = -Math.PI/2;
 
-function Player(xpos,zpos){
-	
-	this.name = 'sa';
-		
-	loader.load(
-		'obj/models/minecraft_sole.json',
-		function ( geometry, materials ) {
-			
-			var material = new THREE.MultiMaterial( materials );
-			this.player = new THREE.Mesh( geometry, material );
-			this.player.position.set(xpos , 1, zpos );
-			this.player.scale.set(0.3, 0.3, 0.3);
-			playerArray.push( this.player );
-			scene.add( this.player );
-			
-		}
-	);
-	
+  this.mesh.add(this.ground);
+
 }
 
-function createPlayer(x,z){
-	
-	player = new Player(x,z);
-	
-}
+var Level = function() {
 
-/*
-ooooo       ooooo  ooooooo8 ooooo ooooo ooooooooooo  oooooooo8 
- 888         888 o888    88  888   888  88  888  88 888        
- 888         888 888    oooo 888ooo888      888      888oooooo 
- 888      o  888 888o    88  888   888      888             888
-o888ooooo88 o888o 888ooo888 o888o o888o    o888o    o88oooo888 
-*/
+  this.mesh = new THREE.Object3D();
 
-function createLights(){
-	
-	var light1 = new THREE.HemisphereLight(0xffffff, 0xffffff, 0.3);
-    light1.position.set(0, 500, 0);
-    
-    var light2 = new THREE.DirectionalLight( 0xffffff );
-    light2.position.set(10,10,30);  
-    light2.castShadow = true;
-    light2.shadow.mapSize.width = 512;
-    light2.shadow.mapSize.height = 512;
-    light2.shadow.camera.near = 0.5;
-    light2.shadow.camera.far = 500;
-    
-    var light3 = new THREE.DirectionalLight(0xffffff);
-    light3.position.set(300, 300, 1000);
-	
-	scene.add( light1 );
-	scene.add( light2 );
-	scene.add( light3 );
-	
-}
+  var plane = null;
+  var geometry = new THREE.BoxGeometry(1, 0.5, 1);
+  var material = null;
 
-/*
- oooooooo8    oooooooo8 ooooooooooo oooo   oooo ooooooooooo
-888         o888     88  888    88   8888o  88   888    88 
- 888oooooo  888          888ooo8     88 888o88   888ooo8   
-        888 888o     oo  888    oo   88   8888   888    oo 
-o88oooo888   888oooo88  o888ooo8888 o88o    88  o888ooo8888
-*/
+  for (var i = 0; i < world.length; i++) {
 
-function createScene(){
-	scene = new THREE.Scene();
-	camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, .1, 500);    
-    
-    camera.position.x = 50;
-    camera.position.y = 45;
-    camera.position.z = 50;
-    camera.updateProjectionMatrix();
-    camera.lookAt(scene.position);
-    
-	renderer = new THREE.WebGLRenderer({
-        antialias: true,
-        alpha: true
-    });
-    renderer.setClearColor( 0x000000, 0 );
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    
-    
-    
-}
+    var dir = world[i];
+    for (var j = 0; j < dir.length; j++) {
 
-/*
-oooo     oooo  ooooooo  oooooooooo  ooooo       ooooooooo  
- 88   88  88 o888   888o 888    888  888         888    88o
-  88 888 88  888     888 888oooo88   888         888    888
-   888 888   888o   o888 888  88o    888      o  888    888
-    8   8      88ooo88  o888o  88o8 o888ooooo88 o888ooo88  
-*/                                                          
+      if (dir[j] == 0) {
+        plane = new Sea(j, i);
+      } else {
+        plane = new Ground(j, i);
+      }
+      this.mesh.add(plane.mesh);
 
-function listToMatrix(list, elementsPerSubArray) {
-    var matrix = [], i, k;
-
-    for (i = 0, k = -1; i < list.length; i++) {
-        if (i % elementsPerSubArray === 0) {
-            k++;
-            matrix[k] = [];
-        }
-
-        matrix[k].push(list[i]);
     }
+  }
+ }
 
-    return matrix;
+var level;
+var spawnLevel = function(){
+	level = new Level();
+	level.mesh.position.x = -worldWidth/2;
+	level.mesh.position.z = -worldHeight/2;
+	scene.add(level.mesh);
 }
 
-function World(){
+var townContainer = [];
+var Town = function( xpos,zpos ){
 	
 	this.mesh = new THREE.Object3D();
-	this.type = 'sea';
-	var plane = null;
-	var geometry = new THREE.CubeGeometry( 1, 1, 1 );
-	var material = null;
+	var geometry = new THREE.BoxGeometry(1, 2, 1);
+	var material = new THREE.MeshPhongMaterial({ color: Colors.midnightColor, wireframe: false });
+	var cube = new THREE.Mesh(geometry, material);
+	cube.position.set(xpos,1.7,zpos);
+	townContainer.push(cube);
+	this.mesh.add(cube);
 	
-	this.levelArray = [
-		[0,0,0,0,0,0,0,1,1,1,1,1,1,0,0],
-		[0,0,0,0,0,0,0,1,1,1,0,1,1,1,0],
-		[0,0,0,0,0,0,0,1,1,1,0,1,1,1,0],
-		[0,1,1,1,0,0,0,1,1,1,0,0,1,0,0],
-		[0,1,1,1,1,1,1,1,1,1,0,0,0,0,0],
-		[0,1,1,1,0,1,0,1,1,1,0,1,1,1,0],
-		[0,1,1,1,0,1,1,1,1,1,0,1,1,1,0],
-		[0,0,0,0,0,0,0,1,1,1,0,0,1,1,0],
-		[0,0,0,0,0,0,0,1,1,1,0,0,0,0,0],
-		[0,0,0,0,0,0,0,1,1,1,0,0,0,0,0],
-		[0,0,0,2,2,0,0,1,1,1,0,0,0,0,0],
-		[0,1,1,1,2,0,0,1,1,1,0,0,0,0,0],
-		[0,1,1,1,2,1,0,1,1,1,0,0,0,0,0],
-		[0,1,1,1,2,1,0,1,1,1,0,0,0,0,0],
-		[0,0,0,2,2,1,0,1,1,1,0,0,0,0,0]
-	];
-	
-	for(var i = 0; i < this.levelArray.length; i++) {
-		
-		var dir = this.levelArray[i];	
-		for( var j = 0 ; j < dir.length ; j++) {
-
-			if( dir[j] == 0 ){
-				
-				material = new THREE.MeshPhongMaterial( {color: Colors.skyColor } );
-				plane = new THREE.Mesh( geometry, material );
-				plane.tex = Colors.skyColor;
-				plane.type = 'sea';
-				plane.position.set( j , 0 , i );
-			}
-			else if( dir[j] == 2 ){
-				
-				material = new THREE.MeshPhongMaterial( {color: Colors.midnightColor } );
-				plane = new THREE.Mesh( geometry, material );
-				plane.tex = Colors.midnightColor;
-				plane.type = 'sea';
-				plane.position.set( j , 0 , i );
-			}
-			else {
-				
-				material = new THREE.MeshPhongMaterial( {color: Colors.groundColor } );
-				plane = new THREE.Mesh( geometry , material );
-				plane.tex = Colors.groundColor;
-				plane.type = 'ground';
-				plane.position.set( j , 0 , i );
-			}
-			
-			plane.rotation.x = -Math.PI / 2;
-			
-			mapArray.push( plane );
-			
-			this.mesh.add( plane );
-			
-		}
-	}
-	
-	level = listToMatrix(mapArray, this.levelArray.length );
 }
-
-World.prototype.selectSurroundingArea = function( object ){
-
-	var selectX = object.position.x;
-	var selectZ = object.position.z;
-    
-	if( selection === null ){ // if selectoin never ran before proceed with normal selection
-		
-		selection = Array2D.neighbors( level , selectZ, selectX);
-		
-		for (var i = 0 ; i <= selection.length ; i++){
-			if( selection[i] == undefined ){	
-				continue;
-			}
-			else {
-				selection[i].material.color.setHex(0xff0000);
-			}
-		}
-		
-	}
+var spawnTown = function(xpos,zpos){
 	
-	else {
-		
-		for (var j = 0 ; j <= selection.length ; j++){
-			if( selection[j] == undefined ){	
-				continue;
-			}
-			else {
-				selection[j].material.color.setHex( selection[j].tex );
-				console.log( selection[j].tex );
-			}
-		}
-				
-		selection = Array2D.neighbors( level , selectZ, selectX);
-		
-		for (var k = 0 ; k <= selection.length ; k++){
-			if( selection[k] == undefined ){	
-				continue;
-			}
-			else {
-				selection[k].material.color.setHex(0xff0000);
-			}
-		}
-		
-	}
+	var town = new Town(xpos,zpos);
+	scene.add(town.mesh);
 	
 }
 
+var spawnLights = function(){
+	
+	var shadowlight = new THREE.DirectionalLight(0xffffff, 1);
+	shadowlight.position.set(30, 20, 30);
+	shadowlight.castShadow = true;
+	shadowlight.shadow.mapSize.width = 1024;
+	shadowlight.shadow.mapSize.height = 1024;
+	scene.add(shadowlight);
 
-function createWorld(){
-	world = new World();
-	scene.add(world.mesh);
+	var shadowlight1 = new THREE.DirectionalLight(0xffffff, 1);
+	shadowlight1.position.set(-30, -20, -30);
+	shadowlight1.castShadow = true;
+	shadowlight1.shadow.mapSize.width = 1024;
+	shadowlight1.shadow.mapSize.height = 1024;
+	scene.add(shadowlight1);
+
+
+	var hemiLight = new THREE.HemisphereLight(Colors.skyColor, 0x44ff44, 0.4);
+	hemiLight.position.copy(new THREE.Vector3(0, 500, 0));
+	scene.add(hemiLight);
+	
+}
+
+var playerContainer = [];
+var Player = function(xpos,zpos){
+	
+	this.mesh = new THREE.Object3D();
+	
+	var geometry = new THREE.BoxGeometry(1, 1, 1);
+	var material = new THREE.MeshPhongMaterial({
+	  color: 0xff0000,
+	  wireframe: false
+	});
+	var cube = new THREE.Mesh(geometry, material);
+	cube.position.set(xpos,1.2,zpos);
+	playerContainer.push(cube);
+	this.mesh.add(cube);
+
+}
+var spawnPlayer = function(x,z){
+	
+	var player = new Player(x,z);
+	scene.add(player.mesh);
+	
+}
+
+function getRandomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1) + min);
+}
+var worldDimX = ( worldWidth/2  ) - 1;
+var worldDimZ = ( worldHeight/2 ) - 1;
+
+var addPlayer = function(){
+	var x = getRandomInt( -worldDimX-1 , worldDimX );
+	var z = getRandomInt( -worldDimZ-1 , worldDimZ );
+	spawnPlayer(x,z);
+}
+var addTown = function(){
+	var x = getRandomInt( -worldDimX , worldDimX );
+	var z = getRandomInt( -worldDimZ , worldDimZ );
+	spawnTown(x,z)
 }
 
 init();
 animate();
 
-/*
+function init() {
 
-ooooo oooo   oooo ooooo ooooooooooo
- 888   8888o  88   888  88  888  88
- 888   88 888o88   888      888    
- 888   88   8888   888      888    
-o888o o88o    88  o888o    o888o  
+	spawnLights();
+	spawnLevel();
 
-*/
-
-function init(event) {
-	
-	createScene();
-    createLights();
-	createWorld();
-	createTower();
-	
-    controls = new THREE.OrbitControls(camera, renderer.domElement);
-    // controls.enableZoom = false;
-    // controls.enableRotate = false;
-	
-    
-    controls.addEventListener('change', render);
-	$("#container").append(renderer.domElement);
 }
 
-/*
+function animate(){
 
-     o      oooo   oooo ooooo oooo     oooo      o   ooooooooooo ooooooooooo
-    888      8888o  88   888   8888o   888      888  88  888  88  888    88 
-   8  88     88 888o88   888   88 888o8 88     8  88     888      888ooo8   
-  8oooo88    88   8888   888   88  888  88    8oooo88    888      888    oo 
-o88o  o888o o88o    88  o888o o88o  8  o88o o88o  o888o o888o    o888ooo8888
+  var delta = clock.getDelta();
+  stats.update();
+  requestAnimationFrame(animate);
+  controls.update(delta);
+  renderer.render(scene, camera);
 
-*/
+  // addPlayer();
+  // addTown();
 
-function animate() {
-	
-	requestAnimationFrame(animate);
-	controls.update();
-	TWEEN.update();
-    render();
-	
+};
+
+
+var axisHelper = new THREE.AxisHelper( 10 );
+axisHelper.position.y = 3;
+scene.add( axisHelper );
+
+function render() {
+
+	var delta = clock.getDelta();
+	// var time = clock.getElapsedTime() * 10;
+
+	// for ( var i = 0, l = geometry.vertices.length; i < l; i ++ ) {
+		// geometry.vertices[ i ].y =  Math.sin( i / 5 + ( time + i ) / 7 );
+	// }
+
+	// mesh.geometry.verticesNeedUpdate = true;
+
+	controls.update( delta );
+	renderer.render( scene, camera );
+  // addPlayer();
+  // addTown();
 }
-
-function render() {	
-    
-    renderer.render(scene, camera);	
-    
-}
-
-/*
-
-ooooooooooo                                   o8   888           
- 888    88 oooo   oooo ooooooooo8 oo oooooo o888oo 888 oooooooo8 
- 888ooo8    888   888 888oooooo8   888   888 888  o88 888ooooooo 
- 888    oo   888 888  888          888   888 888              888
-o888ooo8888    888      88oooo888 o888o o888o 888o    88oooooo88 
-
-*/
-
-function onWorldEvent( event ) {
-
-    event.preventDefault();		
-	mouse.x = ( event.clientX / renderer.domElement.clientWidth ) * 2 - 1;
-	mouse.y = - ( event.clientY / renderer.domElement.clientHeight ) * 2 + 1;
-	raycaster.setFromCamera( mouse, camera );
-
-	intersects = raycaster.intersectObjects( mapArray );
-    
-    if ( intersects.length > 0 ) {
-        world.selectSurroundingArea( intersects[0].object );
-		
-    }
-    
-}
-
-window.addEventListener( 'click', onWorldEvent, false );
-
-function onTowerMouseDown( event ) {
-
-    event.preventDefault();		
-	mouse.x = ( event.clientX / renderer.domElement.clientWidth ) * 2 - 1;
-	mouse.y = - ( event.clientY / renderer.domElement.clientHeight ) * 2 + 1;
-	raycaster.setFromCamera( mouse, camera );
-
-	intersects = raycaster.intersectObjects( towerArray );
-    
-    if ( intersects.length > 0 ) {
-        tower.selectedTower();
-    }
-    
-}
-
-window.addEventListener( 'click', onPlayerMouseDown, false );
-
-function onPlayerMouseDown( event ) {
-
-    event.preventDefault();		
-	mouse.x = ( event.clientX / renderer.domElement.clientWidth ) * 2 - 1;
-	mouse.y = - ( event.clientY / renderer.domElement.clientHeight ) * 2 + 1;
-	raycaster.setFromCamera( mouse, camera );
-
-	intersects = raycaster.intersectObjects( towerArray );
-    
-    if ( intersects.length > 0 ) {
-        tower.selectedTower();
-    }
-    
-}
-
-window.addEventListener( 'click', onTowerMouseDown, false );
-
-$('.addPlayer').on('click', function(){
-    createPlayer( 6, 6);
-});
-
-window.addEventListener('resize', function () {
-    SCREEN_WIDTH = window.innerWidth;
-    SCREEN_HEIGHT = window.innerHeight;
-    camera.aspect = SCREEN_WIDTH / SCREEN_HEIGHT;
-    camera.updateProjectionMatrix();
-    renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
-});

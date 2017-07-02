@@ -5,33 +5,36 @@
 		<title>Game</title>
 		<meta charset="UTF-8">
 		<meta name="viewport" content="initial-scale=1.0">
+		<!-- <link rel="stylesheet" href="//cdn.rawgit.com/necolas/normalize.css/master/normalize.css"> -->
+		<link rel="stylesheet" href="//cdn.rawgit.com/milligram/milligram/master/dist/milligram.min.css">
         <link rel="stylesheet" type="text/css" href="css/style.css">
+        <link rel="stylesheet" type="text/css" href="css/dat.gui.css">
+		
+		<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Roboto:300,300italic,700,700italic">
 	</head>
 
+
 	<body>
-        <div id="container"></div>
-		<div id="interface">
-		
-			<div class="bottomBar">
-            
-                <div class="addPlayer">Add Player</div>
-				
-                <div class="addPlayer">Add Player</div>
-                
-            </div>
-		
+        
+		<div class="row bar">
+			<div class="column">
+				<div class="button " style="margin:10px 10px" onclick="addPlayer();" > Add Player</div>
+				<div class="button " style="margin:10px 10px" onclick="addTown();" > Add Town</div>
+			</div>
 		</div>
+		
 	</body>
-    
-	
-    
+
+
+
     <script src="js/jquery-3.2.1.min.js"></script>
-	<script src="js/Tween.min.js"></script>
+    <script src="js/easystar-0.4.1.min.js"></script>
+    <script src="js/Stats.js"></script>
     <script src="js/three.min.js"></script>
-    <script src="js/Array2D.min.js"></script>
+    <script src="js/TweenMax.min.js"></script>
     <script src="js/JSONLoader.js"></script>
     <script src="js/OrbitControls.js"></script>
-	
+
     <script src="app/script.js"></script>
-   
+
 </html>

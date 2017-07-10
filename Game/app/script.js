@@ -1,16 +1,10 @@
-// stats
-stats = new Stats();
-stats.domElement.style.position = 'absolute';
-stats.domElement.style.top = '10px';
-stats.domElement.style.left = '10px';
-stats.domElement.style.zIndex = 100;
-document.body.appendChild(stats.domElement);
+var easystar = new EasyStar.js();
 
 var world = [
   []
 ];
-var worldWidth = 30;
-var worldHeight = 30;
+var worldWidth = 40;
+var worldHeight = 40;
 var chanceToStartAlive = 0.55;
 var deathLimit = 4;
 var birthLimit = 5;
@@ -94,13 +88,57 @@ function countAliveNeighbours(map, x, y) {
   return count;
 }
 
-//////////////////////////////////////////////////////////////////// THREE.JS
 
-var world2 = world.slice(0);
-var easystar = new EasyStar.js();
 
-easystar.setGrid(world2);
+
+easystar.setGrid(world);
 easystar.setAcceptableTiles([1]);
+easystar.enableDiagonals();
+easystar.findPath(0, 0, 4, 7, function( path ) {
+	if (path === null) {
+		console.log('no path');
+	} else {
+  	walkPath = path.slice(0);
+    console.log(path);
+	}
+});
+easystar.calculate();
+
+
+var movePlayerPath = function(xto,zto){
+	easystar.findPath(player.position.z, player.position.z, xto, zto, function( path ) {
+    if (path === null) {
+      	console.log('no path');
+    }
+    else {
+        var xa = [];
+        var za = [];  
+
+        for ( var i = 0; i < path.length; i++ ){
+        xa.push( path[i].x );
+        za.push( path[i].y );
+        }
+        new TWEEN.Tween(player.position).to({ x: xa , y:1.2, z: za}, 800).start();
+    }
+  });
+  easystar.calculate();
+}
+
+$('.movePlayer').on('click',function(){
+  
+  var xa = [];
+  var za = [];  
+  
+  for ( var i = 0; i < walkPath.length; i++ ){
+    xa.push( walkPath[i].x );
+    za.push( walkPath[i].y );
+  }
+  
+  new TWEEN.Tween(player.position).to({ x: xa , y:1.2, z: za}, 800).start();
+});
+
+raycaster = new THREE.Raycaster();
+mouse = new THREE.Vector2();
 
 var Colors = {
   midnightColor: 0x514656,
@@ -110,225 +148,220 @@ var Colors = {
   skyColor: 0x57D0FA,
   floorColor: 0xD3BA85,
   waterColor: 0x74ccf4
-
 };
 
-var clock = new THREE.Clock();
-
-scene = new THREE.Scene();
+var scene = new THREE.Scene();
 scene.fog = new THREE.Fog(Colors.skyColor, 30, 120);
 
-var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 2, 40);
-camera.position.set(0, 5, 0);
-camera.rotation.y = 15;
+var camera = new THREE.OrthographicCamera( window.innerWidth / - 2, window.innerWidth / 2, window.innerHeight / 2, window.innerHeight / - 2, -100, 1000 );
+camera.position.set(12, 12, 12);
+camera.lookAt( new THREE.Vector3(0,0,0) );
+camera.zoom = 45;
+
+// var helper = new THREE.CameraHelper(camera);
+// scene.add(helper);
 
 var renderer = new THREE.WebGLRenderer({
   alpha: true,
   antialias: true
 });
-renderer.setPixelRatio( window.devicePixelRatio );
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMapSoft = true;
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-controls = new THREE.OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.enableZoom = true;
-
-var Sea = function(xPos, zPos) {
-
+var Ground = function( x, z ){
   this.mesh = new THREE.Object3D();
-
-  var seaGeometry = new THREE.PlaneGeometry(1, 1, 4,4);
-  var seaMaterial = new THREE.MeshPhongMaterial({
-    color: Colors.waterColor,
-    opacity: 0.5,
-	  wireframe: false,
-    shininess: 0
-  });
-
-  this.sea = new THREE.Mesh(seaGeometry, seaMaterial);
-  this.sea.tex = Colors.waterColor;
-  this.sea.type = 'sea';
-  this.sea.rotation.x = -Math.PI/2;
-  this.sea.position.set(xPos, 0.7, zPos);
-
-  this.mesh.add(this.sea);
-
-}
-var Ground = function(xPos, zPos) {
-
-  this.mesh = new THREE.Object3D();
-
-  var groundGeometry = new THREE.BoxGeometry(1, 1, 1);
-  var groundMaterial = new THREE.MeshPhongMaterial({
-    color: Colors.beigeColor
-  });
-
-  this.ground = new THREE.Mesh(groundGeometry, groundMaterial);
-  this.ground.tex = Colors.floorColor;
-  this.ground.type = 'sea';
-  this.ground.position.set(xPos, 0.2, zPos);
-  this.ground.rotation.x = -Math.PI/2;
-
-  this.mesh.add(this.ground);
-
+  var groundGeometry = new THREE.PlaneGeometry(1, 1, 1);
+  var groundMaterial = new THREE.MeshPhongMaterial({ color: Colors.beigeColor });
+  var ground = new THREE.Mesh(groundGeometry, groundMaterial);
+  ground.tex = Colors.beigeColor;
+  ground.type = 'sea';
+  ground.position.set(x, 0, z);
+  ground.rotation.x = -Math.PI/2;
+  this.mesh.add( ground );
+  return ground;
 }
 
+var Sea = function( x, z ){
+  this.mesh = new THREE.Object3D();
+  var seaGeometry = new THREE.PlaneGeometry(1, 1, 1);
+  var seaMaterial = new THREE.MeshPhongMaterial({ color: Colors.waterColor });
+  var sea = new THREE.Mesh(seaGeometry, seaMaterial);
+  sea.tex = Colors.waterColor;
+  sea.type = 'sea';
+  sea.position.set(x, 0, z);
+  sea.rotation.x = -Math.PI/2;
+  this.mesh.add( sea );
+  return sea;
+}
+
+var levelArray = [];
 var Level = function() {
-
-  this.mesh = new THREE.Object3D();
-
-  var plane = null;
-  var geometry = new THREE.BoxGeometry(1, 0.5, 1);
-  var material = null;
-
+	
+  var levelGroup = new THREE.Object3D();
+  
   for (var i = 0; i < world.length; i++) {
-
     var dir = world[i];
     for (var j = 0; j < dir.length; j++) {
 
       if (dir[j] == 0) {
-        plane = new Sea(j, i);
-      } else {
-        plane = new Ground(j, i);
+        var seaObject = new Sea(i,j);
+        levelGroup.add(seaObject);
+        levelArray.push(seaObject);
+      } 
+      else {
+        var groundObject = new Ground(i,j);
+      	levelGroup.add(groundObject);
+        levelArray.push(groundObject);
       }
-      this.mesh.add(plane.mesh);
-
+      
     }
   }
- }
+  return levelGroup;
 
-var level;
+}
+
 var spawnLevel = function(){
-	level = new Level();
-	level.mesh.position.x = -worldWidth/2;
-	level.mesh.position.z = -worldHeight/2;
-	scene.add(level.mesh);
+  var level = new Level();
+  scene.add(level);
 }
 
-var townContainer = [];
-var Town = function( xpos,zpos ){
-	
-	this.mesh = new THREE.Object3D();
-	var geometry = new THREE.BoxGeometry(1, 2, 1);
-	var material = new THREE.MeshPhongMaterial({ color: Colors.midnightColor, wireframe: false });
-	var cube = new THREE.Mesh(geometry, material);
-	cube.position.set(xpos,1.7,zpos);
-	townContainer.push(cube);
-	this.mesh.add(cube);
-	
-}
-var spawnTown = function(xpos,zpos){
-	
-	var town = new Town(xpos,zpos);
-	scene.add(town.mesh);
-	
-}
+var playerArray = [];
 
-var spawnLights = function(){
-	
-	var shadowlight = new THREE.DirectionalLight(0xffffff, 1);
-	shadowlight.position.set(30, 20, 30);
-	shadowlight.castShadow = true;
-	shadowlight.shadow.mapSize.width = 1024;
-	shadowlight.shadow.mapSize.height = 1024;
-	scene.add(shadowlight);
+var Player = function( x,z ){
 
-	var shadowlight1 = new THREE.DirectionalLight(0xffffff, 1);
-	shadowlight1.position.set(-30, -20, -30);
-	shadowlight1.castShadow = true;
-	shadowlight1.shadow.mapSize.width = 1024;
-	shadowlight1.shadow.mapSize.height = 1024;
-	scene.add(shadowlight1);
-
-
-	var hemiLight = new THREE.HemisphereLight(Colors.skyColor, 0x44ff44, 0.4);
-	hemiLight.position.copy(new THREE.Vector3(0, 500, 0));
-	scene.add(hemiLight);
-	
-}
-
-var playerContainer = [];
-var Player = function(xpos,zpos){
-	
-	this.mesh = new THREE.Object3D();
-	
-	var geometry = new THREE.BoxGeometry(1, 1, 1);
-	var material = new THREE.MeshPhongMaterial({
-	  color: 0xff0000,
-	  wireframe: false
-	});
-	var cube = new THREE.Mesh(geometry, material);
-	cube.position.set(xpos,1.2,zpos);
-	playerContainer.push(cube);
-	this.mesh.add(cube);
+  var geometry = new THREE.BoxGeometry(1, 1, 1);
+  var material = new THREE.MeshPhongMaterial({
+    color: 0xff0000,
+    wireframe: false
+  });
+  var cube = new THREE.Mesh(geometry, material);
+  cube.position.set( x, .5, z );
+  cube.castShadow = true;
+  cube.receiveShadow = true;
+  playerArray.push(cube);
+  return cube;
 
 }
-var spawnPlayer = function(x,z){
-	
-	var player = new Player(x,z);
-	scene.add(player.mesh);
-	
+
+var spawnPlayer = function(){
+  var player = new Player(0,0);
+  scene.add(player);
 }
 
-function getRandomInt(min, max) {
-  return Math.floor(Math.random() * (max - min + 1) + min);
+var Lights = function(){
+  var hemisphereLight = new THREE.HemisphereLight(0xaaaaaa,0x000000, .9);
+  scene.add(hemisphereLight);
 }
-var worldDimX = ( worldWidth/2  ) - 1;
-var worldDimZ = ( worldHeight/2 ) - 1;
 
-var addPlayer = function(){
-	var x = getRandomInt( -worldDimX-1 , worldDimX );
-	var z = getRandomInt( -worldDimZ-1 , worldDimZ );
-	spawnPlayer(x,z);
+var spawnLights = function() {
+  var lights = new Lights();
 }
-var addTown = function(){
-	var x = getRandomInt( -worldDimX , worldDimX );
-	var z = getRandomInt( -worldDimZ , worldDimZ );
-	spawnTown(x,z)
-}
+
 
 init();
 animate();
 
-function init() {
-
-	spawnLights();
-	spawnLevel();
-
+function init(){
+  spawnPlayer();
+  spawnLevel();
+  spawnLights();
 }
 
-function animate(){
-
-  var delta = clock.getDelta();
-  stats.update();
+function animate() {
   requestAnimationFrame(animate);
-  controls.update(delta);
+	TWEEN.update();
+  render();
   renderer.render(scene, camera);
-
-  // addPlayer();
-  // addTown();
-
 };
+function render(){
+  camera.updateProjectionMatrix();
+}
+
+var infre = function(){
+  console.log('random camera move finished');
+}
+
+var moveCamera = function(){
+  var x = Math.floor( Math.random()* worldWidth );
+  var z = Math.floor( Math.random()* worldHeight );
+  new TWEEN.Tween(camera.position)
+      .to({ x: x , y:5, z: z}, 1000)
+      .onComplete( infre )
+      .start();
+}
+
+var la = Array2D.fromArray(levelArray, world.length, world.length);
+var newSelection = null,
+    oldSelection = null;
+
+function unhighlightSurroundings( os ){
+  for( var i = 0; i <= os.length - 1; i++ ){
+    var xp = os[i][0];
+    var zp = os[i][1];
+    la[xp][zp].material.color.setHex( la[xp][zp].tex );
+  }
+}
+
+function highlightSurroundings( ns ){
+  for( var i = 0; i <= ns.length - 1 ; i++ ){
+
+    hx = ns[i][0];
+    hz = ns[i][1];
+    
+    la[hx][hz].material.color.setHex( 0xff00ff );
+  }
+  oldSelection = ns;
+}
+
+function highlight( playerPosition ){
+  newSelection = Array2D.surrounds( la, playerPosition.x, playerPosition.z );
+  if( oldSelection !== null ){
+    unhighlightSurroundings( oldSelection );
+    highlightSurroundings( newSelection );
+  }
+  else {
+    highlightSurroundings( newSelection );
+  }
+}
 
 
-var axisHelper = new THREE.AxisHelper( 10 );
-axisHelper.position.y = 3;
-scene.add( axisHelper );
 
-function render() {
+function onMapClick( event ) {
+  event.preventDefault();
+  mouse.x = ( event.clientX / renderer.domElement.width ) * 2 - 1;
+  mouse.y = - ( event.clientY / renderer.domElement.height ) * 2 + 1;
+  raycaster.setFromCamera( mouse, camera );
+  var intersects = raycaster.intersectObjects( levelArray );
+  if ( intersects.length > 0 ) {
+    console.log(intersects[ 0 ].object.position); 
+  }
+} 
+document.addEventListener( 'mousedown', onMapClick, false );
 
-	var delta = clock.getDelta();
-	// var time = clock.getElapsedTime() * 10;
 
-	// for ( var i = 0, l = geometry.vertices.length; i < l; i ++ ) {
-		// geometry.vertices[ i ].y =  Math.sin( i / 5 + ( time + i ) / 7 );
-	// }
+function onPlayerClick(){
+  event.preventDefault();
+  mouse.x = ( event.clientX / renderer.domElement.width ) * 2 - 1;
+  mouse.y = - ( event.clientY / renderer.domElement.height ) * 2 + 1;
+  raycaster.setFromCamera( mouse, camera );
+  var intersects = raycaster.intersectObjects( playerArray );
 
-	// mesh.geometry.verticesNeedUpdate = true;
+  if ( intersects.length > 0 ) {
+    // intersects[0].object.material.color.setHex( 0xff00ff );
+    highlight(  intersects[0].object.position );
+  }
+}
+document.addEventListener( 'mousedown', onPlayerClick, false );
 
-	controls.update( delta );
-	renderer.render( scene, camera );
-  // addPlayer();
-  // addTown();
+function addPlayer(){
+
+  var x = Math.floor( Math.random()* world.length );
+  var z = Math.floor( Math.random()* world.length );
+
+  var player = new Player(x,z);
+  scene.add(player);
+
 }

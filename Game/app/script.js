@@ -158,9 +158,6 @@ camera.position.set(12, 12, 12);
 camera.lookAt( new THREE.Vector3(0,0,0) );
 camera.zoom = 45;
 
-// var helper = new THREE.CameraHelper(camera);
-// scene.add(helper);
-
 var renderer = new THREE.WebGLRenderer({
   alpha: true,
   antialias: true
@@ -177,7 +174,7 @@ var Ground = function( x, z ){
   var groundMaterial = new THREE.MeshPhongMaterial({ color: Colors.beigeColor });
   var ground = new THREE.Mesh(groundGeometry, groundMaterial);
   ground.tex = Colors.beigeColor;
-  ground.type = 'sea';
+  ground.type = 'ground';
   ground.position.set(x, 0, z);
   ground.rotation.x = -Math.PI/2;
   this.mesh.add( ground );
@@ -305,29 +302,37 @@ function unhighlightSurroundings( os ){
   }
 }
 
-function highlightSurroundings( ns ){
+function highlightSurroundings( ns, playerToMove ){
   for( var i = 0; i <= ns.length - 1 ; i++ ){
 
     hx = ns[i][0];
     hz = ns[i][1];
     
-    la[hx][hz].material.color.setHex( 0xff00ff );
+    if( la[hx][hz].type == 'sea' ){
+      continue;
+    }
+    else {
+      la[hx][hz].material.color.setHex( 0xff00ff );
+    }
   }
   oldSelection = ns;
+  console.log(playerToMove);
 }
 
-function highlight( playerPosition ){
+function highlight( playerPosition, playerToMove ){
   newSelection = Array2D.surrounds( la, playerPosition.x, playerPosition.z );
   if( oldSelection !== null ){
     unhighlightSurroundings( oldSelection );
-    highlightSurroundings( newSelection );
+    highlightSurroundings( newSelection, playerToMove );
   }
   else {
-    highlightSurroundings( newSelection );
+    highlightSurroundings( newSelection, playerToMove );
   }
 }
 
+function playerMove(){
 
+}
 
 function onMapClick( event ) {
   event.preventDefault();
@@ -337,6 +342,7 @@ function onMapClick( event ) {
   var intersects = raycaster.intersectObjects( levelArray );
   if ( intersects.length > 0 ) {
     console.log(intersects[ 0 ].object.position); 
+    console.log(intersects[ 0 ].object.type); 
   }
 } 
 document.addEventListener( 'mousedown', onMapClick, false );
@@ -350,8 +356,7 @@ function onPlayerClick(){
   var intersects = raycaster.intersectObjects( playerArray );
 
   if ( intersects.length > 0 ) {
-    // intersects[0].object.material.color.setHex( 0xff00ff );
-    highlight(  intersects[0].object.position );
+    highlight(  intersects[0].object.position, intersects[0].object );
   }
 }
 document.addEventListener( 'mousedown', onPlayerClick, false );
@@ -362,6 +367,7 @@ function addPlayer(){
   var z = Math.floor( Math.random()* world.length );
 
   var player = new Player(x,z);
+  playerArray.push( player );
   scene.add(player);
 
 }

@@ -1,8 +1,6 @@
 var easystar = new EasyStar.js();
 
-var world = [
-  []
-];
+var world = [[]];
 var worldWidth = 40;
 var worldHeight = 40;
 var chanceToStartAlive = 0.55;

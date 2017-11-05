@@ -14,3 +14,10 @@ body {
 	position:absolute;
 	bottom:0;
 }
+.button {
+  background: yellow;
+  color: black;
+  padding: 10px 20px;
+  margin-top: 2px;
+  cursor: pointer;
+}

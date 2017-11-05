@@ -1,12 +1,13 @@
-var easystar = new EasyStar.js();
-
 var world = [[]];
 var worldWidth = 30;
-var worldHeight = 30;
+var worldHeight = worldWidth;
 var chanceToStartAlive = 0.55;
 var deathLimit = 4;
 var birthLimit = 5;
 var numberOfSteps = 5;
+var newSelection = null;
+var oldSelection = null;
+var playerArray = [];
 
 world = generateMap();
 
@@ -86,41 +87,6 @@ function countAliveNeighbours(map, x, y) {
   return count;
 }
 
-
-
-
-easystar.setGrid(world);
-easystar.setAcceptableTiles([1]);
-easystar.enableDiagonals();
-easystar.findPath(0, 0, 4, 7, function( path ) {
-	if (path === null) {
-		console.log('no path');
-	} else {
-  	walkPath = path.slice(0);
-    console.log(path);
-	}
-});
-easystar.calculate();
-
-
-
-
-$('.movePlayer').on('click',function(){
-
-  var xa = [];
-  var za = [];
-
-  for ( var i = 0; i < walkPath.length; i++ ){
-    xa.push( walkPath[i].x );
-    za.push( walkPath[i].y );
-  }
-
-  new TWEEN.Tween(player.position).to({ x: xa , y:1.2, z: za}, 800).start();
-});
-
-raycaster = new THREE.Raycaster();
-mouse = new THREE.Vector2();
-
 var Colors = {
   midnightColor: 0x514656,
   grassColor: 0x9E9D7D,
@@ -139,13 +105,13 @@ camera.position.set(12, 12, 12);
 camera.lookAt( new THREE.Vector3(0,0,0) );
 camera.zoom = 45;
 
+raycaster = new THREE.Raycaster();
+mouse = new THREE.Vector2();
+
 var renderer = new THREE.WebGLRenderer({
   alpha: true,
   antialias: true
 });
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.shadowMapSoft = true;
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
@@ -177,13 +143,10 @@ var Sea = function( x, z ){
 
 var levelArray = [];
 var Level = function() {
-
   var levelGroup = new THREE.Object3D();
-
   for (var i = 0; i < world.length; i++) {
     var dir = world[i];
     for (var j = 0; j < dir.length; j++) {
-
       if (dir[j] == 0) {
         var seaObject = new Sea(i,j);
         levelGroup.add(seaObject);
@@ -194,19 +157,15 @@ var Level = function() {
       	levelGroup.add(groundObject);
         levelArray.push(groundObject);
       }
-
     }
   }
   return levelGroup;
-
 }
 
 var spawnLevel = function(){
   var level = new Level();
   scene.add(level);
 }
-
-var playerArray = [];
 
 var Player = function( x,z ){
 
@@ -238,7 +197,6 @@ var spawnLights = function() {
   var lights = new Lights();
 }
 
-
 init();
 animate();
 
@@ -258,32 +216,20 @@ function render(){
   camera.updateProjectionMatrix();
 }
 
-var moveCamera = function(){
-  var x = Math.floor( Math.random()* worldWidth );
-  var z = Math.floor( Math.random()* worldHeight );
-  new TWEEN.Tween(camera.position)
-      .to({ x: x , y:5, z: z}, 1000)
-      // .onComplete( xxxxx )
-      .start();
+
+
+function transformTo2D(levelArray){
+  var newArr = [];
+    while(levelArray.length) newArr.push( levelArray.splice(0, worldWidth ));
+    return newArr;
 }
+var la = transformTo2D(levelArray);
 
-// var la = Array2D.fromArray(levelArray, world.length, world.length);
-var newSelection = null,
-    oldSelection = null;
+function highlightSurroundings( la, playerToMove ){
+  for( var i = 0; i <= la.length - 1 ; i++ ){
 
-function unhighlightSurroundings( os ){
-  for( var i = 0; i <= os.length - 1; i++ ){
-    var xp = os[i][0];
-    var zp = os[i][1];
-    la[xp][zp].material.color.setHex( la[xp][zp].tex );
-  }
-}
-
-function highlightSurroundings( ns, playerToMove ){
-  for( var i = 0; i <= ns.length - 1 ; i++ ){
-
-    hx = ns[i][0];
-    hz = ns[i][1];
+    hx = newSelection[i][0];
+    hz = newSelection[i][1];
 
     if( la[hx][hz].type == 'sea' ){
       continue;
@@ -292,33 +238,23 @@ function highlightSurroundings( ns, playerToMove ){
       la[hx][hz].material.color.setHex( 0xff00ff );
     }
   }
-  oldSelection = ns;
+  oldSelection = newSelection;
   console.log(playerToMove);
 }
 
-function highlight( playerPosition, playerToMove ){
-  newSelection = Array2D.surrounds( la, playerPosition.x, playerPosition.z );
-  if( oldSelection !== null ){
-    unhighlightSurroundings( oldSelection );
-    highlightSurroundings( newSelection, playerToMove );
-  }
-  else {
-    highlightSurroundings( newSelection, playerToMove );
-  }
-}
 
 function neighbours( col, row, dis ){
   var matrix= [];
   for( var c = col - dis ; c <= col + dis ; c++ ){
       for( var r = row - dis ; r <= row + dis ; r++ ){
-        var position = { x:c, y:r }
+        var position = { x:c, z:r }
         matrix.push( position );
       }
   }
   return matrix;
 }
 
-function onClick(){
+function onPlayerClick(){
   event.preventDefault();
   mouse.x = ( event.clientX / renderer.domElement.width ) * 2 - 1;
   mouse.y = - ( event.clientY / renderer.domElement.height ) * 2 + 1;
@@ -326,38 +262,28 @@ function onClick(){
   var intersects = raycaster.intersectObjects( playerArray );
 
   if ( intersects.length > 0 ) {
-    // highlight(  intersects[0].object.position, intersects[0].object );
-    // neighbours(o)
-    console.log( neighbours( intersects[0].object.position.x, intersects[0].object.position.x, 2 ) );
+    playerPos = { x: +intersects[0].object.position.x,z: intersects[0].object.position.z  }
+    console.log( playerPos );
+    console.log( neighbours( intersects[0].object.position.x, intersects[0].object.position.z, 2 ) )
+    highlight( playerPos, intersects[0].object );
   }
 }
-document.addEventListener( 'mousedown', onClick, false );
+document.addEventListener( 'mousedown', onPlayerClick, false );
 
 function addPlayer(){
-
   var x = Math.floor( Math.random()* world.length );
   var z = Math.floor( Math.random()* world.length );
-
   var player = new Player(x,z);
   playerArray.push( player );
   scene.add(player);
-
 }
-var movePlayerPath = function(xto,zto){
-	easystar.findPath(player.position.z, player.position.z, xto, zto, function( path ) {
-    if (path === null) {
-      	console.log('no path');
-    }
-    else {
-        var xa = [];
-        var za = [];
-
-        for ( var i = 0; i < path.length; i++ ){
-        xa.push( path[i].x );
-        za.push( path[i].y );
-        }
-        new TWEEN.Tween(player.position).to({ x: xa , y:1.2, z: za}, 800).start();
-    }
-  });
-  easystar.calculate();
+var moveCamera = function(){
+  var x = Math.floor( Math.random()* worldWidth );
+  var z = Math.floor( Math.random()* worldHeight );
+  new TWEEN.Tween(camera.position)
+      .to({ x: x , y:5, z: z}, 1000)
+      .start();
 }
+
+var worldAxis = new THREE.AxisHelper(20);
+scene.add(worldAxis);

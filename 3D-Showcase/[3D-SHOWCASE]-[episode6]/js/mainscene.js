@@ -76,7 +76,7 @@ function init() {
             bumpScale: .0001,
             combine: THREE.MultiplyOperation
         });
-        loader.load('json/back_piece.json', function (geo) {
+        loader.load('json/torus_knot.json', function (geo) {
             back = new THREE.Mesh(geo, mat);
             back.material.needsUpdate = true;
             back.position.set(0, 0, 0);
@@ -199,7 +199,7 @@ $('.sitt').on('click', function () {
             bumpScale: .0001,
             combine: THREE.MultiplyOperation
         });
-        loader.load('json/sit_piece.json', function (geo) {
+        loader.load('json/untitled.json', function (geo) {
 
             sit = new THREE.Mesh(geo, mat);
             sit.material.needsUpdate = true;
